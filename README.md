@@ -1,1 +1,0 @@
-# kinesis-set-up
