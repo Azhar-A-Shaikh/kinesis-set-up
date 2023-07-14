@@ -3,7 +3,7 @@ from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from airflow.utils.dates import days_ago
 from datetime import timedelta
-from airflow.providers.amazon.aws.operators.redshift import RedshiftOperator
+from airflow.providers.amazon.aws.operators.redshift import RedshiftSQLOperator
 import datetime
 
 REDSHIFT_CONN_ID = 'redshift_conn'
@@ -79,21 +79,21 @@ redshift_query_customer_orders_small_transformation = """INSERT INTO PRO_SCHEMA.
        GROUP BY c.c_name, o.o_orderdate, c.batch_id
        ORDER BY o.o_orderdate;"""
 
-redshift_orders_sql_str = RedshiftOperator(
+redshift_orders_sql_str = RedshiftSQLOperator(
     task_id='redshift_raw_insert_order',
     dag=dag,
     redshift_conn_id=REDSHIFT_CONN_ID,
     sql=redshift_query_orders,
 )
 
-redshift_customers_sql_str = RedshiftOperator(
+redshift_customers_sql_str = RedshiftSQLOperator(
     task_id='redshift_raw_insert_customers',
     dag=dag,
     redshift_conn_id=REDSHIFT_CONN_ID,
     sql=redshift_query_customers,
 )
 
-redshift_order_customers_small_transformation = RedshiftOperator(
+redshift_order_customers_small_transformation = RedshiftSQLOperator(
     task_id='redshift_order_customers_small_transformation',
     dag=dag,
     redshift_conn_id=REDSHIFT_CONN_ID,
