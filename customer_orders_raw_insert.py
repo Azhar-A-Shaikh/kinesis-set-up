@@ -59,31 +59,25 @@ task_orders_processing_to_processed = BashOperator(
     dag=dag
 )
 
-redshift_query_orders = [
-    """COPY PRO_SCHEMA.ORDERS_RAW (O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT, BATCH_ID)
+redshift_query_orders = """COPY PRO_SCHEMA.ORDERS_RAW (O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT, BATCH_ID)
        FROM 's3://your-s3-bucket/orders_raw_stage_{0}'
        IAM_ROLE 'your-redshift-iam-role'
-       FORMAT CSV
-       IGNOREHEADER 1;""".format(batch_id),
-]
+       FORMAT AS CSV
+       IGNOREHEADER 1;""".format(batch_id)
 
-redshift_query_customers = [
-    """COPY PRO_SCHEMA.CUSTOMER_RAW (C_CUSTKEY, C_NAME, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT, BATCH_ID)
+redshift_query_customers = """COPY PRO_SCHEMA.CUSTOMER_RAW (C_CUSTKEY, C_NAME, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT, BATCH_ID)
        FROM 's3://your-s3-bucket/customer_raw_stage_{0}'
        IAM_ROLE 'your-redshift-iam-role'
-       FORMAT CSV
-       IGNOREHEADER 1;""".format(batch_id),
-]
+       FORMAT AS CSV
+       IGNOREHEADER 1;""".format(batch_id)
 
-redshift_query_customer_orders_small_transformation = [
-    """INSERT INTO PRO_SCHEMA.ORDER_CUSTOMER_DATE_PRICE (CUSTOMER_NAME, ORDER_DATE, ORDER_TOTAL_PRICE, BATCH_ID)
+redshift_query_customer_orders_small_transformation = """INSERT INTO PRO_SCHEMA.ORDER_CUSTOMER_DATE_PRICE (CUSTOMER_NAME, ORDER_DATE, ORDER_TOTAL_PRICE, BATCH_ID)
        SELECT c.c_name AS customer_name, o.o_orderdate AS order_date, SUM(o.o_totalprice) AS order_total_price, c.batch_id
        FROM PRO_SCHEMA.ORDERS_RAW o
        JOIN PRO_SCHEMA.CUSTOMER_RAW c ON o.o_custkey = c.c_custkey AND o.batch_id = c.batch_id
        WHERE o.o_orderstatus = 'F'
        GROUP BY c.c_name, o.o_orderdate, c.batch_id
-       ORDER BY o.o_orderdate;""",
-]
+       ORDER BY o.o_orderdate;"""
 
 redshift_orders_sql_str = RedshiftOperator(
     task_id='redshift_raw_insert_order',
@@ -108,3 +102,4 @@ redshift_order_customers_small_transformation = RedshiftOperator(
 
 [task_orders_landing_to_processing >> redshift_orders_sql_str >> task_orders_processing_to_processed,
  task_customer_landing_to_processing >> redshift_customers_sql_str >> task_customers_processing_to_processed] >> redshift_order_customers_small_transformation >> post_task
+
